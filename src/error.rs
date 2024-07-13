@@ -1,5 +1,6 @@
 //! Contains [`Error`] and corresponding [`Result`].
 
+use tokio::task::JoinError;
 use std::{error::Error as StdError, fmt, io, result, str::Utf8Error};
 
 use serde::{de, ser};
@@ -20,6 +21,8 @@ pub enum Error {
     Compression(#[source] Box<dyn StdError + Send + Sync>),
     #[error("decompression error: {0}")]
     Decompression(#[source] Box<dyn StdError + Send + Sync>),
+    #[error("join error: {0}")]
+    JoinError(#[from] JoinError), // Added variant for JoinError
     #[error("no rows returned by a query that expected to return at least one row")]
     RowNotFound,
     #[error("sequences must have a known size ahead of time")]

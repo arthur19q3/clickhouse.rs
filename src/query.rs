@@ -1,6 +1,7 @@
 use hyper::{header::CONTENT_LENGTH, Body, Method, Request};
 use serde::Deserialize;
 use url::Url;
+use tokio::task; // For concurrent tasks
 
 use crate::{
     cursor::RowBinaryCursor,
@@ -103,14 +104,26 @@ impl Query {
     /// Note that `T` must be owned.
     pub async fn fetch_all<T>(self) -> Result<Vec<T>>
     where
-        T: Row + for<'b> Deserialize<'b>,
+        T: Row + for<'b> Deserialize<'b> + std::marker::Send + 'static,
     {
-        let mut result = Vec::new();
         let mut cursor = self.fetch::<T>()?;
+        let mut result = Vec::new();
+
+        // Use a buffer to fetch rows in parallel and maintain order
+        let mut buffer = Vec::new();
 
         while let Some(row) = cursor.next().await? {
-            result.push(row);
+            buffer.push(row);
+
+            if buffer.len() >= 100 { // Adjust buffer size as needed
+                let chunk = buffer.split_off(0);
+                let chunk_result = task::spawn(async move { chunk }).await.map_err(Error::from)?;
+                result.extend(chunk_result);
+            }
         }
+
+        // Fetch remaining rows in buffer
+        result.extend(buffer);
 
         Ok(result)
     }
