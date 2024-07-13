@@ -8,10 +8,28 @@ struct SomeRow {
     no: u32,
 }
 
+/// 创建测试表。
+///
+/// 该函数用于创建名为 `test` 的表。
+///
+/// 参数:
+/// - `client`: ClickHouse 客户端实例。
+///
+/// 返回:
+/// - `Result<()>`: 异步操作的结果。
 async fn make_create(client: &Client) -> Result<()> {
     client.query("CREATE TABLE test").execute().await
 }
 
+/// 选择数据。
+///
+/// 该函数用于从 `who cares` 表中选择数据。
+///
+/// 参数:
+/// - `client`: ClickHouse 客户端实例。
+///
+/// 返回:
+/// - `Result<Vec<SomeRow>>`: 包含查询结果的行向量。
 async fn make_select(client: &Client) -> Result<Vec<SomeRow>> {
     client
         .query("SELECT ?fields FROM `who cares`")
@@ -19,6 +37,16 @@ async fn make_select(client: &Client) -> Result<Vec<SomeRow>> {
         .await
 }
 
+/// 插入数据。
+///
+/// 该函数用于向 `who cares` 表中插入数据。
+///
+/// 参数:
+/// - `client`: ClickHouse 客户端实例。
+/// - `data`: 要插入的 `SomeRow` 数据。
+///
+/// 返回:
+/// - `Result<()>`: 异步操作的结果。
 async fn make_insert(client: &Client, data: &[SomeRow]) -> Result<()> {
     let mut insert = client.insert("who cares")?;
     for row in data {
@@ -27,6 +55,15 @@ async fn make_insert(client: &Client, data: &[SomeRow]) -> Result<()> {
     insert.end().await
 }
 
+/// 监视表的变更，并在数据变更时获取最新的数据。
+///
+/// `make_watch` 函数用于监视 `test` 表的数据变更。它通过 `watch` 查询来订阅表的变更事件，并在数据变更时获取最新的数据。
+///
+/// 参数:
+/// - `client`: ClickHouse 客户端实例。
+///
+/// 返回:
+/// - `Result<(u64, SomeRow)>`: 包含版本号和最新行数据的元组。
 #[cfg(feature = "watch")]
 async fn make_watch(client: &Client) -> Result<(u64, SomeRow)> {
     client
@@ -35,6 +72,15 @@ async fn make_watch(client: &Client) -> Result<(u64, SomeRow)> {
         .await
 }
 
+/// 仅监视事件。
+///
+/// `make_watch_only_events` 函数用于监视 `test` 表的变更事件，但不获取数据。
+///
+/// 参数:
+/// - `client`: ClickHouse 客户端实例。
+///
+/// 返回:
+/// - `Result<u64>`: 包含事件版本号。
 #[cfg(feature = "watch")]
 async fn make_watch_only_events(client: &Client) -> Result<u64> {
     client
@@ -50,31 +96,31 @@ async fn main() {
     let client = Client::default().with_url(mock.url());
     let list = vec![SomeRow { no: 1 }, SomeRow { no: 2 }];
 
-    // How to test DDL.
+    // 如何测试 DDL 操作。
     let recording = mock.add(test::handlers::record_ddl());
     make_create(&client).await.unwrap();
     assert!(recording.query().await.contains("CREATE TABLE"));
 
-    // How to test SELECT.
+    // 如何测试 SELECT 操作。
     mock.add(test::handlers::provide(stream::iter(list.clone())));
     let rows = make_select(&client).await.unwrap();
     assert_eq!(rows, list);
 
-    // How to test failures.
+    // 如何测试失败情况。
     mock.add(test::handlers::failure(test::status::FORBIDDEN));
     let reason = make_select(&client).await;
     assert_eq!(format!("{reason:?}"), r#"Err(BadResponse("Forbidden"))"#);
 
-    // How to test INSERT.
+    // 如何测试 INSERT 操作。
     let recording = mock.add(test::handlers::record());
     make_insert(&client, &list).await.unwrap();
     let rows: Vec<SomeRow> = recording.collect().await;
     assert_eq!(rows, list);
 
-    // How to test WATCH.
+    // 如何测试 WATCH 操作。
     #[cfg(feature = "watch")]
     {
-        // Check `CREATE LIVE VIEW` (for `watch(query)` case only).
+        // 检查 `CREATE LIVE VIEW`（仅针对 `watch(query)` 情况）。
         let recording = mock.add(test::handlers::record_ddl());
         mock.add(test::handlers::watch(stream::iter(
             list.into_iter().map(|row| (42, row)),
@@ -84,7 +130,7 @@ async fn main() {
         assert_eq!(version, 42);
         assert_eq!(row, SomeRow { no: 1 });
 
-        // `EVENTS`.
+        // `EVENTS`。
         let recording = mock.add(test::handlers::record_ddl());
         mock.add(test::handlers::watch_only_events(stream::iter(3..5)));
         let version = make_watch_only_events(&client).await.unwrap();
