@@ -109,6 +109,20 @@ async fn select_count(client: &Client) -> Result<()> {
     Ok(())
 }
 
+
+
+/// 监视表的变更，并在数据变更时获取最新的数据。
+///
+/// `watch` 函数用于监视 ClickHouse 表的数据变更。它通过 `watch` 查询来订阅表的变更事件，并在数据变更时获取最新的数据。
+///
+/// 该函数首先执行一次查询来获取当前的最新数据，并打印版本和行内容。然后，它会插入一个新的行数据，接着再次获取最新的变更数据。
+/// 此外，该函数还展示了如何仅请求事件而不获取数据。
+///
+/// 参数:
+/// - `client`: ClickHouse 客户端实例。
+///
+/// 返回:
+/// - `Result<()>`: 异步操作的结果。
 #[cfg(feature = "watch")]
 async fn watch(client: &Client) -> Result<()> {
     let mut cursor = client
