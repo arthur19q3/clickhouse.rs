@@ -1,7 +1,7 @@
 //! Contains [`Error`] and corresponding [`Result`].
 
-use tokio::task::JoinError;
 use std::{error::Error as StdError, fmt, io, result, str::Utf8Error};
+use tokio::task::JoinError;
 
 use serde::{de, ser};
 

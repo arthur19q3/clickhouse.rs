@@ -109,8 +109,6 @@ async fn select_count(client: &Client) -> Result<()> {
     Ok(())
 }
 
-
-
 /// 监视表的变更，并在数据变更时获取最新的数据。
 ///
 /// `watch` 函数用于监视 ClickHouse 表的数据变更。它通过 `watch` 查询来订阅表的变更事件，并在数据变更时获取最新的数据。
