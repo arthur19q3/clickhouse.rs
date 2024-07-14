@@ -13,6 +13,7 @@ use crate::{
 };
 
 const MAX_QUERY_LEN_TO_USE_GET: usize = 8192;
+const BUFFER_SIZE: usize = 20000; // Double the buffer size
 
 #[must_use]
 #[derive(Clone)]
@@ -110,12 +111,12 @@ impl Query {
         let mut result = Vec::new();
 
         // Use a buffer to fetch rows in parallel and maintain order
-        let mut buffer = Vec::new();
+        let mut buffer = Vec::with_capacity(BUFFER_SIZE);
 
         while let Some(row) = cursor.next().await? {
             buffer.push(row);
 
-            if buffer.len() >= 100 { // Adjust buffer size as needed
+            if buffer.len() >= BUFFER_SIZE {
                 let chunk = buffer.split_off(0);
                 let chunk_result = task::spawn(async move { chunk }).await.map_err(Error::from)?;
                 result.extend(chunk_result);
