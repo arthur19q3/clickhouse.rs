@@ -1,6 +1,7 @@
 use hyper::{header::CONTENT_LENGTH, Body, Method, Request};
 use serde::Deserialize;
 use url::Url;
+use rayon::prelude::*;
 
 use crate::{
     cursor::RowBinaryCursor,
@@ -101,20 +102,29 @@ impl Query {
     /// Executes the query and returns all the generated results, collected into a Vec.
     ///
     /// Note that `T` must be owned.
+
+    /// Executes the query and returns all the generated results, collected into a Vec.
+    /// Note that `T` must be owned.
     pub async fn fetch_all<T>(self) -> Result<Vec<T>>
     where
-        T: Row + for<'b> Deserialize<'b>,
+        T: Row + for<'b> Deserialize<'b> + Send + Sync + 'static + Clone,
     {
-        let mut result = Vec::new();
         let mut cursor = self.fetch::<T>()?;
+        let mut results = Vec::new();
 
         while let Some(row) = cursor.next().await? {
-            result.push(row);
+            results.push(row);
         }
 
-        Ok(result)
-    }
+        // Use Rayon's par_bridge and clone each item to maintain order
+        let processed_results: Vec<T> = results.par_iter()
+            .map(|data| {
+                data.clone()  // Clone each item here
+            })
+            .collect();  // Collect into Vec<T>
 
+        Ok(processed_results)
+    }
     pub(crate) fn do_execute(self, read_only: bool) -> Result<Response> {
         let query = self.sql.finish()?;
 

@@ -33,7 +33,7 @@ async fn main() -> Result<()> {
         .execute()
         .await?;
 
-    #[derive(Debug, Serialize, Deserialize, Row)]
+    #[derive(Debug, Clone,Serialize, Deserialize, Row)]
     struct Event {
         timestamp: u64,
         message: String,
@@ -41,7 +41,7 @@ async fn main() -> Result<()> {
     }
 
     // How to define enums that map to `Enum8`/`Enum16`.
-    #[derive(Debug, Serialize_repr, Deserialize_repr)]
+    #[derive(Debug, Serialize_repr, Deserialize_repr, Clone)]
     #[repr(u8)]
     enum Level {
         Debug = 1,
