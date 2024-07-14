@@ -99,9 +99,6 @@ impl Query {
         self.fetch()?.next().await
     }
 
-    /// Executes the query and returns all the generated results, collected into a Vec.
-    ///
-    /// Note that `T` must be owned.
 
     /// Executes the query and returns all the generated results, collected into a Vec.
     /// Note that `T` must be owned.

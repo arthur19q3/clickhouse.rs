@@ -9,6 +9,7 @@ struct MyRow<'a> {
 }
 
 #[derive(Debug, Row, Serialize, Deserialize)]
+#[derive(Clone)]
 struct MyRowOwned {
     no: u32,
     name: String,
